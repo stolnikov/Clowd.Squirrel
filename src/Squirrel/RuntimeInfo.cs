@@ -163,14 +163,22 @@ namespace Squirrel
         public class DotnetInfo : RuntimeInfo
         {
             /// <inheritdoc/>
-            public override string Id => MinVersion.Major >= 5
-                ? $"net{TrimVersion(MinVersion)}-{CpuArchitecture.ToString().ToLower()}"
-                : $"netcoreapp{TrimVersion(MinVersion)}-{CpuArchitecture.ToString().ToLower()}";
+            public override string Id =>  MinVersion.Major >= 5 ?
+                $"net{TrimVersion(MinVersion)}-{RuntimeType.ToString().ToLower()}-{CpuArchitecture.ToString().ToLower()}"
+                : $"netcoreapp{TrimVersion(MinVersion)}-{RuntimeType.ToString().ToLower()}-{CpuArchitecture.ToString().ToLower()}";
 
             /// <inheritdoc/>
-            public override string DisplayName => MinVersion.Major >= 5
-                ? $".NET {TrimVersion(MinVersion)} Desktop Runtime ({CpuArchitecture.ToString().ToLower()})"
-                : $".NET Core {TrimVersion(MinVersion)} Desktop Runtime ({CpuArchitecture.ToString().ToLower()})";
+            public override string DisplayName => $"{GetRunTimeName()} {TrimVersion(MinVersion)} ({CpuArchitecture.ToString().ToLower()})";
+
+            private string GetRunTimeName()
+            {
+                return RuntimeType switch {
+                    DotnetRuntimeType.DotNet => ".NET Runtime",
+                    DotnetRuntimeType.AspNetCore => "ASP.NET Core Runtime",
+                    DotnetRuntimeType.WindowsDesktop => ".NET Desktop Runtime",
+                    _ => throw new NotImplementedException(),
+                };
+            }
 
             /// <summary> The minimum compatible version that must be installed. </summary>
             public NuGetVersion MinVersion { get; }
@@ -178,6 +186,25 @@ namespace Squirrel
             /// <summary> The CPU architecture of the runtime. This must match the RID of the app being deployed.
             /// For example, if the Squirrel app was deployed with 'win-x64', this must be X64 also. </summary>
             public RuntimeCpu CpuArchitecture { get; }
+
+            /// <summary>
+            /// <see cref="DotnetRuntimeType"/>
+            /// </summary>
+            public DotnetRuntimeType RuntimeType { get; }
+
+            /// <inheritdoc/>
+            internal DotnetInfo(string minversion, RuntimeCpu architecture, DotnetRuntimeType runtimeType) : this(
+                minversion, architecture)
+            {
+                RuntimeType = runtimeType;
+            }
+            
+            /// <inheritdoc/>
+            protected DotnetInfo(Version minversion, RuntimeCpu architecture, DotnetRuntimeType runtimeType) : this(
+                minversion, architecture)
+            {
+                RuntimeType = runtimeType;
+            }
 
             /// <inheritdoc/>
             protected DotnetInfo(Version minversion, RuntimeCpu architecture)
@@ -260,7 +287,14 @@ namespace Squirrel
             [SupportedOSPlatform("windows")]
             private bool CheckIsInstalledInBaseDirectory(string baseDirectory)
             {
-                var directory = Path.Combine(baseDirectory, "dotnet", "shared", "Microsoft.WindowsDesktop.App");
+                string sharedFramework = RuntimeType switch {
+                    DotnetRuntimeType.DotNet => "Microsoft.NETCore.App",
+                    DotnetRuntimeType.AspNetCore => "Microsoft.AspNetCore.App",
+                    DotnetRuntimeType.WindowsDesktop => "Microsoft.WindowsDesktop.App",
+                    _ => throw new NotImplementedException(),
+                };
+
+                var directory = Path.Combine(baseDirectory, "dotnet", "shared", sharedFramework);
                 if (!Directory.Exists(directory))
                     return false;
 
@@ -275,17 +309,17 @@ namespace Squirrel
             /// <inheritdoc/>
             public override async Task<string> GetDownloadUrl()
             {
-                var latest = await GetLatestDotNetVersion(DotnetRuntimeType.WindowsDesktop, $"{MinVersion.Major}.{MinVersion.Minor}").ConfigureAwait(false);
+                var latest = await GetLatestDotNetVersion(this.RuntimeType, $"{MinVersion.Major}.{MinVersion.Minor}").ConfigureAwait(false);
                 var architecture = CpuArchitecture switch {
                     RuntimeCpu.x86 => "x86",
                     RuntimeCpu.x64 => "x64",
                     _ => throw new ArgumentOutOfRangeException(nameof(CpuArchitecture)),
                 };
 
-                return GetDotNetDownloadUrl(DotnetRuntimeType.WindowsDesktop, latest, architecture);
+                return GetDotNetDownloadUrl(this.RuntimeType, latest, architecture);
             }
 
-            private static Regex _dotnetRegex = new Regex(@"^net(?:coreapp)?(?<version>[\d\.]{1,6})(?:-(?<arch>[\w\d]+))?$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            private static Regex _dotnetRegex = new Regex(@"^net(?:coreapp)?(?<version>[\d\.]{1,6})(?:-(?<arch>x86|x64|arm64))?(?:-(?<runtime>dotnet|aspnetcore|windowsdesktop|sdk))?$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
             /// <summary>
             /// Parses a string such as 'net6' or net5.0.14-x86 into a DotnetInfo class capable of checking
@@ -299,13 +333,20 @@ namespace Squirrel
 
                 var verstr = match.Groups["version"].Value;
                 var archstr = match.Groups["arch"].Value; // default is x64 if not specified
+                var runtimeType = match.Groups["runtime"].Value; // default is windowsdesktop if not specified
 
                 var archValid = Enum.TryParse<RuntimeCpu>(String.IsNullOrWhiteSpace(archstr) ? "x64" : archstr, true, out var cpu);
                 if (!archValid)
                     throw new ArgumentException($"Invalid machine architecture '{archstr}'.");
+                
+                var runtimeValid = Enum.TryParse<DotnetRuntimeType>(
+                    String.IsNullOrWhiteSpace(runtimeType) ? "windowsdesktop" : runtimeType, true,
+                    out var runtime);
+                if (!runtimeValid)
+                    throw new ArgumentException($"Invalid runtime type '{runtimeType}'.");
 
                 var ver = ParseVersion(verstr);
-                return new DotnetInfo(ver, cpu);
+                return new DotnetInfo(ver, cpu, runtime);
             }
 
             /// <inheritdoc cref="Parse(string)"/>
@@ -373,8 +414,8 @@ namespace Squirrel
                 // https://github.com/dotnet/install-scripts/blob/main/src/dotnet-install.ps1#L427
                 // these are case sensitive
                 string runtime = runtimeType switch {
-                    DotnetRuntimeType.DotNet => "dotnet",
-                    DotnetRuntimeType.AspNetCore => "aspnetcore",
+                    DotnetRuntimeType.DotNet => "Runtime", // CLOWD_FIXED
+                    DotnetRuntimeType.AspNetCore => "aspnetcore/Runtime", // CLOWD_FIXED
                     DotnetRuntimeType.WindowsDesktop => "WindowsDesktop",
                     DotnetRuntimeType.SDK => "Sdk",
                     _ => throw new NotImplementedException(),

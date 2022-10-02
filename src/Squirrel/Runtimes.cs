@@ -45,7 +45,9 @@ namespace Squirrel
         /// <summary> Runtime for .NET 6.0 Desktop Runtime (x86) </summary>
         public static readonly DotnetInfo DOTNET6_X86 = new("6.0.2", RuntimeCpu.x86); // eg. net6-x86
         /// <summary> Runtime for .NET 6.0 Desktop Runtime (x64) </summary>
-        public static readonly DotnetInfo DOTNET6_X64 = new("6.0.2", RuntimeCpu.x64); // eg. net6.0.2
+        public static readonly DotnetInfo DOTNET6_X64 = new("6.0.2", RuntimeCpu.x64, DotnetRuntimeType.WindowsDesktop); // eg. net6.0.2
+        /// <summary> Runtime for .NET 6.0 ASP.NET Core Runtime (x64) </summary>
+        public static readonly DotnetInfo DOTNET6_X64_ASPNETCORE = new("6.0.2", RuntimeCpu.x64, DotnetRuntimeType.AspNetCore); // eg. net6-aspnetcore
 
 
         /// <summary> Runtime for Visual C++ 2010 Redistributable (x86) </summary>

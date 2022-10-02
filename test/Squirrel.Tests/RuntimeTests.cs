@@ -12,17 +12,19 @@ namespace Squirrel.Tests
         // we are upgrading net6 to a minimum version of 6.0.2 to work
         // around a dotnet SDK bug right now.
         [Theory]
-        [InlineData("net6", "net6.0.2-x64")]
-        [InlineData("net6.0", "net6.0.2-x64")]
-        [InlineData("net6-x64", "net6.0.2-x64")]
-        [InlineData("net6-x86", "net6.0.2-x86")]
-        [InlineData("net3.1", "netcoreapp3.1-x64")]
-        [InlineData("netcoreapp3.1", "netcoreapp3.1-x64")]
-        [InlineData("net3.1-x86", "netcoreapp3.1-x86")]
-        [InlineData("net6.0.2", "net6.0.2-x64")]
-        [InlineData("net6.0.2-x86", "net6.0.2-x86")]
-        [InlineData("net6.0.1-x86", "net6.0.1-x86")]
-        [InlineData("net6.0.0", "net6-x64")]
+        [InlineData("net6", "net6.0.2-windowsdesktop-x64")]
+        [InlineData("net6.0", "net6.0.2-windowsdesktop-x64")]
+        [InlineData("net6-x64", "net6.0.2-windowsdesktop-x64")]
+        [InlineData("net6-x86", "net6.0.2-windowsdesktop-x86")]
+        [InlineData("net3.1", "netcoreapp3.1-windowsdesktop-x64")]
+        [InlineData("netcoreapp3.1", "netcoreapp3.1-windowsdesktop-x64")]
+        [InlineData("net3.1-x86", "netcoreapp3.1-windowsdesktop-x86")]
+        [InlineData("net6.0.2", "net6.0.2-windowsdesktop-x64")]
+        [InlineData("net6.0.2-x86", "net6.0.2-windowsdesktop-x86")]
+        [InlineData("net6.0.1-x86", "net6.0.1-windowsdesktop-x86")]
+        [InlineData("net6.0.0", "net6-windowsdesktop-x64")]
+        [InlineData("net6-windowsdesktop", "net6.0.2-windowsdesktop-x64")]
+        [InlineData("net6-aspnetcore", "net6.0.2-aspnetcore-x64")]
         public void DotnetParsesValidVersions(string input, string expected)
         {
             var p = Runtimes.DotnetInfo.Parse(input);
@@ -54,6 +56,8 @@ namespace Squirrel.Tests
         [InlineData("asd", false)]
         [InlineData("", false)]
         [InlineData(null, false)]
+        [InlineData("net6-windowsdesktop", true)]
+        [InlineData("net6-aspnetcore", true)]
         public void GetRuntimeTests(string input, bool expected)
         {
             var dn = Runtimes.GetRuntimeByName(input);
