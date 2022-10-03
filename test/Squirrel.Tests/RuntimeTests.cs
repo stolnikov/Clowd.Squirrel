@@ -58,10 +58,19 @@ namespace Squirrel.Tests
         [InlineData(null, false)]
         [InlineData("net6-windowsdesktop", true)]
         [InlineData("net6-aspnetcore", true)]
+        [InlineData("edgewebview2", true)]
         public void GetRuntimeTests(string input, bool expected)
         {
             var dn = Runtimes.GetRuntimeByName(input);
             Assert.Equal(expected, dn != null);
+        }
+
+        [Fact]
+        public async Task CheckWebview()
+        {
+            var wb = new Runtimes.EdgeWebview2("edgewebview2-x64", "Edge Webview2 Runtime", RuntimeCpu.x64, "https://go.microsoft.com/fwlink/p/?LinkId=212470");
+            var isInstalled = await wb.CheckIsInstalled();
+            Assert.True(isInstalled);
         }
     }
 }

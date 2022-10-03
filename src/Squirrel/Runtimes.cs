@@ -48,6 +48,8 @@ namespace Squirrel
         public static readonly DotnetInfo DOTNET6_X64 = new("6.0.2", RuntimeCpu.x64, DotnetRuntimeType.WindowsDesktop); // eg. net6.0.2
         /// <summary> Runtime for .NET 6.0 ASP.NET Core Runtime (x64) </summary>
         public static readonly DotnetInfo DOTNET6_X64_ASPNETCORE = new("6.0.2", RuntimeCpu.x64, DotnetRuntimeType.AspNetCore); // eg. net6-aspnetcore
+        /// <summary>Runtime for Microsoft Edge WebView2</summary>
+        public static readonly EdgeWebview2 EDGE_WEBVIEW2 = new("edgewebview2-x64", "Edge Webview2 Runtime", RuntimeCpu.x64, "https://go.microsoft.com/fwlink/p/?LinkId=2124703");
 
 
         /// <summary> Runtime for Visual C++ 2010 Redistributable (x86) </summary>
