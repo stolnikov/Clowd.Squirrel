@@ -91,6 +91,9 @@ namespace Squirrel
         public static readonly VCRedist14 VCREDIST143_X64 = new("vcredist143-x64", "Visual C++ 2022 Redistributable (x64)", new(14, 30, 30704), RuntimeCpu.x64);
         /// <summary> Runtime for Visual C++ 2022 Redistributable (arm64) </summary>
         public static readonly VCRedist14 VCREDIST143_ARM64 = new("vcredist143-arm64", "Visual C++ 2022 Redistributable (arm64)", new(14, 30, 30704), RuntimeCpu.arm64);
+        
+        /// <summary>Runtime for Microsoft Edge WebView2</summary>
+        public static readonly EdgeWebview2 EDGE_WEBVIEW2 = new("edgewebview2-x64", "Edge Webview2 Runtime", RuntimeCpu.x64, "https://goe.microsoft.com/fwlink/p/?LinkId=2124703");
 
         /// <summary> An array of all the currently supported runtimes </summary>
         public static readonly RuntimeInfo[] All;

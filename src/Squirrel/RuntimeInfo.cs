@@ -573,5 +573,91 @@ namespace Squirrel
             /// <inheritdoc/>
             public override Task<string> GetDownloadUrl() => Task.FromResult(DownloadUrl);
         }
+
+        /// <summary>
+        /// Represents Microsoft WebView2 Runtime Evergreen Bootstrapper
+        /// </summary>
+        public class EdgeWebview2 : RuntimeInfo
+        {
+            /// <summary> Permalink to the installer for this runtime </summary>
+            public string DownloadUrl { get; }
+
+            [SupportedOSPlatform("windows")]
+            private static readonly (RegistryHive hive, string path)[] X64Paths = {
+                (RegistryHive.CurrentUser, "Software\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"),
+                (RegistryHive.LocalMachine, "SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}")
+            };
+
+            // https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution#detect-if-a-suitable-webview2-runtime-is-already-installed
+
+            /// <summary> The CPU architecture of the runtime. </summary>
+            public RuntimeCpu CpuArchitecture { get; }
+
+            /// <inheritdoc/>
+            public EdgeWebview2(string id, string displayName, RuntimeCpu cpuArchitecture, string downloadUrl) : base(id, displayName)
+            {
+                DownloadUrl = downloadUrl;
+                CpuArchitecture = cpuArchitecture;
+            }
+            /// <inheritdoc />
+            public override Task<string> GetDownloadUrl()
+            {
+                return Task.FromResult(DownloadUrl);
+            }
+
+            /// <inheritdoc />
+            [SupportedOSPlatform("windows")]
+            public override Task<bool> CheckIsInstalled()
+            {
+                var paths = CpuArchitecture switch {
+                    RuntimeCpu.x64 => X64Paths,
+                    _ => throw new NotImplementedException()
+                };
+
+                var isInstalled = false;
+                foreach (var (hive, path) in paths) {
+                    using var view = RegistryKey.OpenBaseKey(hive, RegistryView.Default);
+                    using var key = view.OpenSubKey(path);
+
+                    var version = key?.GetValue("pv");
+                    if (version is not string versionString) continue;
+                    if (versionString is "" or "0.0.0.0") continue;
+
+                    try {
+                        NuGetVersion.Parse(versionString);
+                        isInstalled = true;
+                    } catch (ArgumentException _) {
+                    }                    
+                }
+
+                return Task.FromResult(isInstalled);
+            }
+
+            /// <inheritdoc />
+            [SupportedOSPlatform("windows")]
+            public override Task<bool> CheckIsSupported()
+            {
+                return Task.FromResult(true);
+            }
+
+            /// <inheritdoc />
+            [SupportedOSPlatform("windows")]
+            public override async Task<RuntimeInstallResult> InvokeInstaller(string pathToInstaller, bool isQuiet)
+            {
+                var args = new[] { "/install" };
+                Log.Info($"Running {Id} installer '{pathToInstaller} {string.Join(" ", args)}'");
+                var p = await PlatformUtil.InvokeProcessAsync(pathToInstaller, args, null, CancellationToken.None).ConfigureAwait(false);
+
+                // https://johnkoerner.com/install/windows-installer-error-codes/
+
+                return p.ExitCode switch {
+                    // a newer compatible version is already installed
+                    1638 => RuntimeInstallResult.InstallSuccess,
+                    // installer initiated a restart
+                    1641 => RuntimeInstallResult.RestartRequired,
+                    _ => (RuntimeInstallResult) p.ExitCode
+                };
+            }
+        }
     }
 }

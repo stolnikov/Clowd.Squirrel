@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Squirrel.Tests
@@ -58,10 +59,19 @@ namespace Squirrel.Tests
         [InlineData(null, false)]
         [InlineData("net6-x64", true)]
         [InlineData("net6-x64-sdk", true)]
+        [InlineData("edgewebview2", true)]
         public void GetRuntimeTests(string input, bool expected)
         {
             var dn = Runtimes.GetRuntimeByName(input);
             Assert.Equal(expected, dn != null);
+        }
+
+        [Fact]
+        public async Task CheckWebview()
+        {
+            var wb = Runtimes.EDGE_WEBVIEW2;
+            var isInstalled = await wb.CheckIsInstalled();
+            Assert.True(isInstalled);
         }
     }
 }
